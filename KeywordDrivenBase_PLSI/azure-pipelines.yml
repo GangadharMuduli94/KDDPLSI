@@ -1,0 +1,46 @@
+# Maven
+# Build your Java project and run tests with Apache Maven.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/java
+
+trigger:
+- bheemarao-m595/KeywordDrivenBase_PLSI/master
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: 'Set-DisplayResolution -Width 1920 -Height 1080 -Force'
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: |
+      $url = "$($env:SYSTEM_TEAMFOUNDATIONCOLLECTIONURI)Agile%20Development/_apis/test/runs/2880?api-version=7.0"
+              Write-Host "URL: $url"
+              $pat = "3gakokx5b5pu3hd4f34g2uj2hfmzoienlyp4i5gqzsbofw3jwhfa"
+              $token = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes(":$($pat)"))
+              $header = @{authorization = "Basic $token"}
+              $pipeline = Invoke-RestMethod -Method Delete -Uri $url -Headers $header
+              Write-Host "Pipeline = $($pipeline | ConvertTo-Json -Depth 100)"
+  env:
+     SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+- task: Maven@3
+  inputs:
+    mavenPomFile: 'pom.xml'
+    mavenOptions: '-Xmx3072m'
+    javaHomeOption: 'JDKVersion'
+    jdkVersionOption: '1.8'
+    jdkArchitectureOption: 'x64'
+    publishJUnitResults: true
+    testResultsFiles: '**/junitreports/TEST-*.xml'
+    goals: 'clean test -PDemoKewwordDrivenADO'
+
+- task: PublishPipelineArtifact@1
+  inputs:
+      targetPath: 'target/html-report'
+      artifact: 'Extent Reports'
+      publishLocation: 'pipeline'
